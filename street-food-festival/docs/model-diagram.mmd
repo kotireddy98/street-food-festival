@@ -1,0 +1,19 @@
+erDiagram
+    VENDORS ||--o{ ORDERS : receives
+    VENDORS {
+        string _id PK
+        string name
+        string cuisine
+        object stall
+        number rating
+        array tags
+        array menu_embedded
+    }
+    ORDERS {
+        objectId _id PK
+        string vendor_id FK
+        date ts
+        string payment
+        array items
+        number total
+    }

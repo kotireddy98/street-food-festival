@@ -1,0 +1,34 @@
+MODEL EXPLANATION
+The menu is embedded inside each vendor because it is a small, bounded list commonly read with the vendor profile. Orders are separate because they can grow without bound and should be queried independently. Each order references its vendor through vendor_id, avoiding duplicated vendor details and unbounded vendor documents.
+
+ALL VEGAN DISHES UNDER 7 EUR
+db.vendors.aggregate([{ $unwind: "$menu" }, { $match: { "menu.vegan": true, "menu.price": { $lt: 7 }, "menu.available": { $ne: false } } }, { $project: { _id: 0, vendor: "$name", dish: "$menu.item", price: "$menu.price" } }]);
+
+ZONE B VENDORS RATING > 4.3
+db.vendors.find({ "stall.zone": "B", rating: { $gt: 4.3 } });
+
+GEORGIAN PRICE INCREASE 10 PERCENT
+db.vendors.updateMany({ cuisine: "Georgian" }, [{ $set: { menu: { $map: { input: "$menu", as: "dish", in: { $mergeObjects: ["$$dish", { price: { $round: [{ $multiply: ["$$dish.price", 1.10] }, 2] }] }] } } } }]);
+
+DELETE VENDOR AND ORPHANED ORDERS
+db.vendors.deleteOne({ _id: "V12" });
+db.orders.countDocuments({ vendor_id: "V12" });
+// MongoDB does not cascade-delete referenced documents automatically.
+
+REVENUE PER VENDOR
+db.orders.aggregate([{ $group: { _id: "$vendor_id", revenue: { $sum: "$total" } } }, { $sort: { revenue: -1 } }]);
+
+PEAK HOUR BY DAY
+db.orders.aggregate([{ $group: { _id: { day: { $dayOfMonth: "$ts" }, hour: { $hour: "$ts" } }, orders: { $sum: 1 } } }, { $sort: { "_id.day": 1, orders: -1, "_id.hour": 1 } }, { $group: { _id: "$_id.day", busiestHour: { $first: "$_id.hour" }, orderCount: { $first: "$orders" } } }]);
+
+PAYMENT SHARE
+db.orders.aggregate([{ $group: { _id: "$payment", orders: { $sum: 1 } } }, { $group: { _id: null, methods: { $push: { method: "$_id", orders: "$orders" } }, total: { $sum: "$orders" } } }, { $unwind: "$methods" }, { $project: { _id: 0, payment: "$methods.method", orders: "$methods.orders", percentage: { $multiply: [{ $divide: ["$methods.orders", "$total"] }, 100] } } }]);
+
+INDEX
+db.orders.createIndex({ ts: 1, vendor_id: 1 }, { name: "ts_vendor_compound" });
+
+JSON SCHEMA REJECTED INSERT
+db.vendors.insertOne({ _id: "BAD01", name: "Bad Price", cuisine: "Test", stall: { zone: "Z", number: 99 }, rating: 4, tags: [], menu: [{ item: "Negative price dish", price: -2, vegan: true, allergens: [] }] });
+
+SESAME RECALL
+db.vendors.updateMany({}, { $set: { "menu.$[dish].available": false } }, { arrayFilters: [{ "dish.allergens": "sesame" }] });

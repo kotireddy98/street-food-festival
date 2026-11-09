@@ -1,0 +1,18 @@
+RUN IN ATLAS MONGOSH, DATABASE festival:
+1. scripts/00_setup.js
+2. scripts/01_vendors.js
+3. scripts/02_generate_orders.js
+4. scripts/03_basic_queries.js
+5. scripts/04_aggregation_pipelines.js (run each section separately for screenshots)
+6. scripts/05_index_explain.js (capture before and after stats)
+7. Demonstrate rejected insert using queries/all_queries.txt
+8. scripts/07_delete_vendor_demo.js (run after analytics)
+9. scripts/06_twist_sesame_recall.js
+
+Expected structural checks:
+- db.vendors.countDocuments() -> 12 before optional vendor deletion
+- db.orders.countDocuments() -> 300
+- db.festival_report.find() -> one summary document after pipeline E
+- Georgian vendor prices are increased by 10% (rounding to 2 decimals)
+- Sesame dishes are marked available:false after twist script
+Note: random orders mean analytical values and explain metrics vary.
